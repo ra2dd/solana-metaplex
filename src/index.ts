@@ -4,18 +4,11 @@ import {
   Metaplex,
   keypairIdentity,
   bundlrStorage,
-  toMetaplexFile,
-  NftWithToken,
 } from "@metaplex-foundation/js"
-import * as fs from "fs"
-
-interface NftData {
-  name: string
-  symbol: string
-  description: string
-  sellerFeeBasisPoints: number
-  imageFile: string
-}
+import {
+  uploadMetadata,
+  createNft,
+} from "./metaplexHelper"
 
 interface CollectionNftData {
   name: string
@@ -53,6 +46,24 @@ async function main() {
   const user = await initializeKeypair(connection)
 
   console.log("PublicKey:", user.publicKey.toBase58())
+
+  // metaplex set up
+  const metaplex = Metaplex.make(connection)
+    .use(keypairIdentity(user))
+    .use(
+      bundlrStorage({
+        address: "https://devnet.bundlr.network",
+        providerUrl: "https://api.devnet.solana.com",
+        timeout: 60000,
+      }),
+    );
+
+  // upload NFT data and get the uri for the metadata
+  const uri = await uploadMetadata(metaplex, nftData)
+
+  // create NFT using the helper function and uri with metadata
+  const nft = await createNft(metaplex, uri, nftData)
+  console.log(nft)
 }
 
 main()
