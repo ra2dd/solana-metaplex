@@ -1,5 +1,5 @@
 import { initializeKeypair } from "./initializeKeypair"
-import { Connection, clusterApiUrl, PublicKey, Signer } from "@solana/web3.js"
+import { Connection, clusterApiUrl, Signer } from "@solana/web3.js"
 import {
   Metaplex,
   keypairIdentity,
@@ -8,6 +8,7 @@ import {
 import {
   uploadMetadata,
   createNft,
+  updateNftUri,
 } from "./metaplexHelper"
 
 interface CollectionNftData {
@@ -63,7 +64,13 @@ async function main() {
 
   // create NFT using the helper function and uri with metadata
   const nft = await createNft(metaplex, uri, nftData)
-  console.log(nft)
+
+  
+  // upload updated NFT data and get new uri for the metadata
+  const updatedUri = await uploadMetadata(metaplex, updateNftData)
+
+  // update the NFT using the helper function and the new URI from the metadata
+  await updateNftUri(metaplex, updatedUri, nft.address)
 }
 
 main()
