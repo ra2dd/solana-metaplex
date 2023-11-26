@@ -1,5 +1,5 @@
 import { initializeKeypair } from "./initializeKeypair"
-import { Connection, clusterApiUrl, Signer } from "@solana/web3.js"
+import { Connection, clusterApiUrl, Keypair } from "@solana/web3.js"
 import {
   Metaplex,
   keypairIdentity,
@@ -9,17 +9,9 @@ import {
   uploadMetadata,
   createNft,
   updateNftUri,
+  createCollectionNft,
+  CollectionNftData
 } from "./metaplexHelper"
-
-interface CollectionNftData {
-  name: string
-  symbol: string
-  description: string
-  sellerFeeBasisPoints: number
-  imageFile: string
-  isCollection: boolean
-  collectionAuthority: Signer
-}
 
 // example data for a new NFT
 const nftData = {
@@ -37,6 +29,18 @@ const updateNftData = {
   description: "Update Description",
   sellerFeeBasisPoints: 100,
   imageFile: "success.png",
+}
+
+function getCollectionNftData(user: Keypair): CollectionNftData {
+  return {
+    name: "TestCollectionNFT",
+    symbol: "TEST",
+    description: "Test Description Collection",
+    sellerFeeBasisPoints: 100,
+    imageFile: "success.png",
+    isCollection: true,
+    collectionAuthority: user,
+  }
 }
 
 async function main() {
@@ -59,12 +63,29 @@ async function main() {
       }),
     );
 
+  // upload NFT collection data and get uri for the metadata
+  const collectionNftData = getCollectionNftData(user)
+  const collectionUri = await uploadMetadata(metaplex, collectionNftData)
+
+  // create NFT collection using the helper function and uri with metadata
+  const collectionNft = await createCollectionNft(
+    metaplex,
+    collectionUri,
+    collectionNftData,
+  )
+
+
   // upload NFT data and get the uri for the metadata
   const uri = await uploadMetadata(metaplex, nftData)
 
   // create NFT using the helper function and uri with metadata
-  const nft = await createNft(metaplex, uri, nftData)
-
+  const nft = await createNft(
+    metaplex, 
+    uri, 
+    nftData, 
+    collectionNft.mint.address
+  )
+  
   
   // upload updated NFT data and get new uri for the metadata
   const updatedUri = await uploadMetadata(metaplex, updateNftData)

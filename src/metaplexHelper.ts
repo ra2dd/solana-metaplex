@@ -3,7 +3,7 @@ import {
   toMetaplexFile,
   NftWithToken,
 } from "@metaplex-foundation/js"
-import { PublicKey } from "@solana/web3.js"
+import { PublicKey, Signer } from "@solana/web3.js"
 import * as fs from "fs"
 
 interface NftData {
@@ -12,6 +12,16 @@ interface NftData {
   description: string
   sellerFeeBasisPoints: number
   imageFile: string
+}
+
+export interface CollectionNftData {
+  name: string
+  symbol: string
+  description: string
+  sellerFeeBasisPoints: number
+  imageFile: string
+  isCollection: boolean
+  collectionAuthority: Signer
 }
 
 export async function uploadMetadata(
@@ -44,13 +54,15 @@ export async function createNft(
   metaplex: Metaplex,
   uri: string,
   nftData: NftData,
+  collectionMint: PublicKey
 ): Promise<NftWithToken> {
   const { nft } = await metaplex.nfts().create(
     {
       uri: uri, // metadata uri
       name: nftData.name,
       sellerFeeBasisPoints: nftData.sellerFeeBasisPoints,
-      symbol: nftData.symbol
+      symbol: nftData.symbol,
+      collection: collectionMint
     },
     { commitment: "finalized" },
   );
@@ -58,6 +70,13 @@ export async function createNft(
   console.log(
     `Token Mint: https://explorer.solana.com/address/${nft.address.toString()}?cluster=devnet`
   );
+
+  // verify collection as a Certified Collection
+  await metaplex.nfts().verifyCollection({
+    mintAddress: nft.mint.address,
+    collectionMintAddress: collectionMint,
+    isSizedCollection: true,
+  })
 
   return nft;
 }
@@ -86,4 +105,28 @@ export async function updateNftUri(
   console.log(
     `Transaction: https://explorer.solana.com/tx/${response.signature}?cluster=devnet`
   );
+}
+
+
+export async function createCollectionNft(
+  metaplex: Metaplex,
+  uri: string,
+  data: CollectionNftData,
+): Promise<NftWithToken> {
+  const { nft } = await metaplex.nfts().create(
+    {
+      uri: uri,
+      name: data.name,
+      sellerFeeBasisPoints: data.sellerFeeBasisPoints,
+      symbol: data.symbol,
+      isCollection: true
+    },
+    { commitment: "finalized" }
+  )
+
+  console.log(
+    `Collection Mint: https://explorer.solana.com/address/${nft.address.toString()}?cluster=devnet`
+  )
+
+  return nft
 }
